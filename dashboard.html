@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tableau de bord — Axians ACSL</title>
+  <meta name="description" content="Accès restreint au tableau de bord Pilotage Backlog">
+  <style>
+    :root{
+      --brand:#00c4c4;
+      --bg:#f5f7fb;
+      --text:#333333;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --danger:#e11d48;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .card{
+      width:min(920px,92vw);
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:clamp(18px,2.4vw,28px);
+      box-shadow:0 12px 40px rgba(2,10,20,.08);
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .brand .logo{
+      width:36px;height:36px;border-radius:9px;
+      background:linear-gradient(135deg,var(--brand),#4de5e5);
+      display:inline-flex;align-items:center;justify-content:center;
+      color:white;font-weight:800;letter-spacing:.5px;
+    }
+    h1{font-size:clamp(18px,2.6vw,22px);margin:0 0 6px}
+    p{margin:0 0 12px;color:var(--muted)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    .row > *{flex:1 1 220px}
+    .input, .button{
+      width:100%;
+      padding:12px 14px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      font-size:16px;
+    }
+    .input:focus{outline:2px solid rgba(0,196,196,.25);border-color:var(--brand)}
+    .button{background:var(--brand);color:white;border:none;font-weight:700;cursor:pointer}
+    .button:hover{filter:brightness(.98)}
+    .hint{font-size:13px;color:var(--muted);margin-top:6px}
+    .error{color:var(--danger);display:none;margin-top:8px;font-weight:600}
+    .dash{
+      display:none;margin-top:16px;
+      height:calc(100vh - 220px);
+      min-height:480px;
+      border-radius:12px;
+      overflow:hidden;
+      background:#00000006;
+    }
+    iframe{width:100%;height:100%;border:0}
+    .footer{
+      margin-top:14px;
+      font-size:12px;color:#9aa3af;text-align:center;
+    }
+    @media (max-width:680px){
+      .dash{height:calc(100vh - 260px)}
+    }
+  </style>
+</head>
+<body>
+  <main class="card" id="card">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">PD</div>
+      <div>
+        <h1>Accès au tableau de bord Pilotage Backlog Axians ACSL</h1>
+        <p>AXIANS - Espace restreint</p>
+      </div>
+    </div>
+
+    <div id="gate">
+      <label for="pwd" class="hint">Saisissez le mot de passe pour afficher le rapport.</label>
+      <div class="row">
+        <input class="input" id="pwd" type="password" placeholder="Mot de passe" autocomplete="current-password" />
+        <button class="button" id="btn">Valider</button>
+      </div>
+      <div class="hint">Astuce : une fois validé, l’accès restera mémorisé sur cet appareil.</div>
+      <div class="error" id="err">Mot de passe incorrect.</div>
+    </div>
+
+    <section class="dash" id="dash" aria-live="polite">
+      <!-- Remplacez l’URL ci-dessous par votre lien “Publish to web” -->
+      <iframe id="pbi" title="Dashboard Power BI" allowfullscreen="true"
+        src="https://app.powerbi.com/groups/me/reports/4e5b0d49-28d8-405a-a677-11b69d19b527/fa874c42d10e87bd71a8?experience=power-bi">
+      </iframe>
+    </section>
+
+    <div class="footer">
+      ⚠️ Ne publiez ici que des données destinées au public. L’accès par mot de passe reste côté navigateur.
+    </div>
+  </main>
+
+  <script>
+    // ————— PARAMÈTRES À ADAPTER —————
+    // Pour plus de discrétion, on stocke un hash du mot de passe au lieu du mot de passe en clair.
+    // Changez PASS_HASH par le hash SHA‑256 du mot de passe (voir plus bas).
+    const PASS_HASH = "b109f3bbbc244eb82441917ed06d618b9008dd09b3befd1b5e07394c706a8bb9"; // hash de "change-me"
+    const STORAGE_KEY = "phronesis_dashboard_ok";
+
+    // ——— UTIL ———
+    async function sha256(text){
+      const enc = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+
+    function showDash(){
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("dash").style.display = "block";
+      localStorage.setItem(STORAGE_KEY,"1");
+      setTimeout(()=>{
+        // scroll to top of card to avoid any mobile jump
+        document.getElementById("card").scrollIntoView({behavior:"smooth", block:"start"});
+      }, 50);
+    }
+
+    async function validate(){
+      const input = document.getElementById("pwd");
+      const err = document.getElementById("err");
+      err.style.display = "none";
+      const hash = await sha256(input.value);
+      if(hash === PASS_HASH){
+        showDash();
+      }else{
+        err.style.display = "block";
+        input.focus();
+        input.select();
+      }
+    }
+
+    // Auto‑déverrouillage si déjà validé sur cet appareil
+    if(localStorage.getItem(STORAGE_KEY)==="1"){
+      showDash();
+    }
+
+    // UI events
+    document.getElementById("btn").addEventListener("click", validate);
+    document.getElementById("pwd").addEventListener("keyup", (e)=>{
+      if(e.key === "Enter") validate();
+    });
+
+    // ——— AIDE : obtenir le hash SHA‑256 de votre mot de passe dans la console du navigateur ———
+    // Ouvrez F12 (Console) sur cette page et collez :
+    // (async t=>console.log(await (await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t))).buffer)
+    // => NON lisible facilement. Préférez :
+    // (async (t)=>{const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''))})('votre-mot-de-passe')
+    // Remplacez ensuite la constante PASS_HASH ci‑dessus.
+  </script>
+</body>
+</html>
